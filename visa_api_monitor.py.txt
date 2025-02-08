@@ -1,0 +1,46 @@
+import os
+import time
+import requests
+from dotenv import load_dotenv
+from fake_useragent import UserAgent
+
+# Load API credentials from .env file
+load_dotenv()
+API_URL = os.getenv("API_URL")
+SESSION_COOKIE = os.getenv("SESSION_COOKIE")
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+CHAT_ID = os.getenv("CHAT_ID")
+
+# Rotate user-agent to avoid detection
+ua = UserAgent()
+
+def check_visa_slots():
+    headers = {
+        "User-Agent": ua.random,
+        "Cookie": f"session={SESSION_COOKIE}",
+        "Referer": "https://www.ustraveldocs.com/",
+    }
+
+    response = requests.get(API_URL, headers=headers)
+
+    if response.status_code == 200:
+        data = response.json()
+        if data.get("available_dates"):
+            print(f"✅ Slots available: {data['available_dates']}")
+            send_telegram_alert(f"🎉 Visa slots available: {data['available_dates']}")
+        else:
+            print("❌ No slots available.")
+    else:
+        print(f"⚠️ API error: {response.status_code}")
+
+def send_telegram_alert(message):
+    """Send a Telegram notification when a slot is found."""
+    requests.post(
+        f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
+        data={"chat_id": CHAT_ID, "text": message},
+    )
+
+if _name_ == "_main_":
+    while True:
+        check_visa_slots()
+        time.sleep(180)  # Wait 3 minutes before checking again
